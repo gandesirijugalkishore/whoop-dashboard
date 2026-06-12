@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WHOOP Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  /* ── Tokens ─────────────────────────────────────────────── */
+  :root {
+    --bg:        #0a0a0f;
+    --surface:   #13131a;
+    --border:    #1e1e2e;
+    --text:      #e8e8f0;
+    --muted:     #6b6b85;
+    --recovery:  #00e5a0;
+    --strain:    #ff6b35;
+    --sleep:     #7c6af7;
+    --hr:        #ff4d6d;
+    --accent:    #00e5a0;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --radius:    12px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── Token screen ───────────────────────────────────────── */
+  #token-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 2rem;
+    gap: 2rem;
+    background: radial-gradient(ellipse at 50% 0%, #00e5a015 0%, transparent 70%);
+  }
+
+  .token-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2.5rem;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .whoop-logo {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .token-card h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .token-card p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .token-input-wrap {
+    position: relative;
+    margin-bottom: 1rem;
+  }
+
+  .token-input-wrap input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .token-input-wrap input:focus {
+    border-color: var(--accent);
+  }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.85rem 1.5rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .hint {
+    margin-top: 1.5rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    line-height: 1.7;
+  }
+
+  .hint a { color: var(--accent); text-decoration: none; }
+
+  #error-msg {
+    color: var(--hr);
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    display: none;
+  }
+
+  /* ── App shell ──────────────────────────────────────────── */
+  #app { display: none; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+    backdrop-filter: blur(8px);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .logo { font-family: var(--font-mono); font-size: 0.9rem; letter-spacing: 0.25em; color: var(--accent); font-weight: 700; }
+
+  .user-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+
+  .avatar {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--recovery), var(--sleep));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; font-weight: 700; color: #000;
+  }
+
+  .btn-sm {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.4rem 0.9rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  .btn-sm:hover { color: var(--text); border-color: var(--muted); }
+
+  /* ── Layout ─────────────────────────────────────────────── */
+  main { padding: 2rem; max-width: 1280px; margin: 0 auto; }
+
+  .section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  /* ── Stat rings (hero) ──────────────────────────────────── */
+  .hero {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .ring-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ring-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent-color, var(--accent));
+  }
+
+  .ring-canvas-wrap { position: relative; width: 100px; height: 100px; }
+
+  .ring-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ring-value {
+    font-family: var(--font-mono);
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .ring-unit { font-size: 0.65rem; color: var(--muted); }
+
+  .ring-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .ring-sub { font-size: 0.75rem; color: var(--muted); text-align: center; }
+
+  /* ── Charts grid ────────────────────────────────────────── */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  @media (max-width: 768px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    header { padding: 1rem; }
+    main { padding: 1rem; }
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+  }
+
+  .chart-card h3 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .chart-card .sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  .chart-wrap { position: relative; height: 200px; }
+
+  /* ── Table ──────────────────────────────────────────────── */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    overflow-x: auto;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+
+  thead th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #ffffff06; }
+
+  td { padding: 0.65rem 0.75rem; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .badge.green  { background: #00e5a015; color: var(--recovery); }
+  .badge.orange { background: #ff6b3515; color: var(--strain); }
+  .badge.purple { background: #7c6af715; color: var(--sleep); }
+  .badge.red    { background: #ff4d6d15; color: var(--hr); }
+
+  /* ── Loading ─────────────────────────────────────────────── */
+  #loading {
+    display: none;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+
+  /* ── Range selector ─────────────────────────────────────── */
+  .range-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .range-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.4rem 0.9rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .range-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 700;
+  }
+
+  /* ── Date badge ──────────────────────────────────────────── */
+  .date-badge {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-left: auto;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Token Screen ─────────────────────────────────────── -->
+<div id="token-screen">
+  <div class="token-card">
+    <div class="whoop-logo">WHOOP</div>
+    <h1>Your Dashboard</h1>
+    <p>Enter your WHOOP access token to visualize your recovery, strain, sleep, and workout data. Your token stays in your browser — it's never sent anywhere except WHOOP's API.</p>
+
+    <div class="token-input-wrap">
+      <input type="password" id="token-input" placeholder="Paste your WHOOP access token..." autocomplete="off" />
+    </div>
+    <div id="error-msg">❌ Could not connect. Check your token and try again.</div>
+    <button class="btn-primary" onclick="connect()">Connect to WHOOP →</button>
+
+    <div class="hint">
+      <strong>How to get your token:</strong><br>
+      1. Go to <a href="https://developer-dashboard.whoop.com" target="_blank">developer-dashboard.whoop.com</a><br>
+      2. Create an App → authorize yourself<br>
+      3. Copy the access token and paste above<br><br>
+      🔒 Token is stored only in your browser's memory for this session.
+    </div>
+  </div>
+</div>
+
+<!-- ── Loading ──────────────────────────────────────────── -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Fetching your WHOOP data...</div>
+</div>
+
+<!-- ── App ──────────────────────────────────────────────── -->
+<div id="app">
+  <header>
+    <div class="header-left">
+      <div class="logo">WHOOP</div>
+      <div class="user-pill">
+        <div class="avatar" id="avatar-initials">JK</div>
+        <span id="user-name">Loading...</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.5rem;align-items:center">
+      <span class="date-badge" id="last-updated"></span>
+      <button class="btn-sm" onclick="logout()">Disconnect</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Range -->
+    <div class="range-bar">
+      <span style="font-size:0.78rem;color:var(--muted);align-self:center;margin-right:0.25rem">Range:</span>
+      <button class="range-btn" onclick="setRange(7, this)">7d</button>
+      <button class="range-btn active" onclick="setRange(14, this)">14d</button>
+      <button class="range-btn" onclick="setRange(30, this)">30d</button>
+    </div>
+
+    <!-- Hero rings -->
+    <div class="section-label">Today at a glance</div>
+    <div class="hero" id="hero-cards">
+      <!-- injected by JS -->
+    </div>
+
+    <!-- Charts -->
+    <div class="section-label">Trends</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>Recovery Score</h3>
+        <div class="sub">Daily HRV-based recovery %</div>
+        <div class="chart-wrap"><canvas id="chart-recovery"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Day Strain</h3>
+        <div class="sub">Cardiovascular load (0–21)</div>
+        <div class="chart-wrap"><canvas id="chart-strain"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Sleep Performance</h3>
+        <div class="sub">Sleep quality %</div>
+        <div class="chart-wrap"><canvas id="chart-sleep"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Resting Heart Rate</h3>
+        <div class="sub">Overnight avg BPM</div>
+        <div class="chart-wrap"><canvas id="chart-rhr"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Workouts table -->
+    <div class="section-label">Recent Workouts</div>
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Activity</th>
+            <th>Strain</th>
+            <th>Avg HR</th>
+            <th>Max HR</th>
+            <th>Duration</th>
+            <th>Calories</th>
+          </tr>
+        </thead>
+        <tbody id="workout-table">
+          <tr><td colspan="7" style="color:var(--muted);text-align:center;padding:1.5rem">Loading workouts...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Sleep table -->
+    <div class="section-label">Recent Sleep</div>
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Duration</th>
+            <th>Performance</th>
+            <th>Efficiency</th>
+            <th>REM</th>
+            <th>Deep</th>
+            <th>Disturbances</th>
+          </tr>
+        </thead>
+        <tbody id="sleep-table">
+          <tr><td colspan="7" style="color:var(--muted);text-align:center;padding:1.5rem">Loading sleep data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── Config ───────────────────────────────────────────────────
+const BASE = 'https://api.prod.whoop.com/developer';
+let TOKEN = '';
+let charts = {};
+let allData = {};
+let currentDays = 14;
+
+// ── Helpers ──────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const fmt = {
+  date: d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+  time: ms => {
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    return `${h}h ${m}m`;
+  },
+  pct: n => n != null ? Math.round(n) + '%' : '—',
+  num: n => n != null ? Math.round(n) : '—',
+  strain: n => n != null ? n.toFixed(1) : '—',
+};
+
+const SPORT_NAMES = {
+  0: 'Running', 1: 'Cycling', 16: 'Baseball', 17: 'Basketball',
+  18: 'Rowing', 19: 'Fencing', 20: 'Field Hockey', 21: 'Football',
+  22: 'Golf', 24: 'Ice Hockey', 25: 'Lacrosse', 27: 'Rugby',
+  28: 'Sailing', 29: 'Skiing', 30: 'Soccer', 31: 'Softball',
+  32: 'Squash', 33: 'Swimming', 34: 'Tennis', 35: 'Track & Field',
+  36: 'Volleyball', 37: 'Water Polo', 38: 'Wrestling', 39: 'Boxing',
+  42: 'Dance', 43: 'Pilates', 44: 'Yoga', 45: 'Weightlifting',
+  47: 'Cross Country Skiing', 48: 'Functional Fitness', 49: 'Duathlon',
+  51: 'Gymnastics', 52: 'Hiking', 53: 'Horseback Riding', 55: 'Kayaking',
+  56: 'Martial Arts', 57: 'Mountain Biking', 59: 'Powerlifting',
+  60: 'Rock Climbing', 61: 'Paddleboarding', 62: 'Triathlon',
+  63: 'Walking', 64: 'Surfing', 65: 'Elliptical', 66: 'Stairmaster',
+  70: 'Meditation', 71: 'Other', 73: 'Diving', 74: 'Operations',
+  75: 'Obstacle Course Racing', 76: 'Obstacle Racing', 80: 'Pickleball',
+  84: 'Strength Training',
+};
+
+async function whoopFetch(path, params = {}) {
+  const url = new URL(`${BASE}${path}`);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${TOKEN}` } });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
+
+async function fetchAllPages(path, params = {}) {
+  let records = [], nextToken = null;
+  do {
+    const p = { ...params, limit: 25, ...(nextToken ? { nextToken } : {}) };
+    const data = await whoopFetch(path, p);
+    records = records.concat(data.records || []);
+    nextToken = data.next_token || null;
+  } while (nextToken);
+  return records;
+}
+
+// ── Connect ──────────────────────────────────────────────────
+async function connect() {
+  const token = $('token-input').value.trim();
+  if (!token) return;
+  TOKEN = token;
+  $('error-msg').style.display = 'none';
+  $('token-screen').style.display = 'none';
+  $('loading').style.display = 'flex';
+  try {
+    await loadDashboard();
+  } catch (e) {
+    TOKEN = '';
+    $('loading').style.display = 'none';
+    $('token-screen').style.display = 'flex';
+    $('error-msg').style.display = 'block';
+  }
+}
+
+function logout() {
+  TOKEN = '';
+  allData = {};
+  $('app').style.display = 'none';
+  $('token-screen').style.display = 'flex';
+  $('token-input').value = '';
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+}
+
+// ── Load ─────────────────────────────────────────────────────
+async function loadDashboard() {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 60); // fetch 60d, display filtered by range
+
+  const [profile, recoveries, cycles, sleeps, workouts] = await Promise.all([
+    whoopFetch('/v2/user/profile/basic'),
+    fetchAllPages('/v2/recovery', { start: start.toISOString(), end: end.toISOString() }),
+    fetchAllPages('/v2/cycle', { start: start.toISOString(), end: end.toISOString() }),
+    fetchAllPages('/v2/activity/sleep', { start: start.toISOString(), end: end.toISOString() }),
+    fetchAllPages('/v2/activity/workout', { start: start.toISOString(), end: end.toISOString() }),
+  ]);
+
+  allData = { profile, recoveries, cycles, sleeps, workouts };
+
+  // Header
+  const initials = `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`;
+  $('avatar-initials').textContent = initials;
+  $('user-name').textContent = `${profile.first_name} ${profile.last_name}`;
+  $('last-updated').textContent = `Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+  renderRange(currentDays);
+  $('loading').style.display = 'none';
+  $('app').style.display = 'block';
+}
+
+function setRange(days, btn) {
+  currentDays = days;
+  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderRange(days);
+}
+
+function renderRange(days) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+
+  const recoveries = allData.recoveries.filter(r => new Date(r.created_at) >= cutoff).reverse();
+  const cycles     = allData.cycles.filter(c => new Date(c.start) >= cutoff).reverse();
+  const sleeps     = allData.sleeps.filter(s => new Date(s.start) >= cutoff).reverse();
+  const workouts   = allData.workouts.filter(w => new Date(w.start) >= cutoff).reverse();
+
+  renderHero(recoveries, cycles, sleeps, workouts);
+  renderCharts(recoveries, cycles, sleeps);
+  renderWorkoutTable(workouts);
+  renderSleepTable(sleeps);
+}
+
+// ── Hero ──────────────────────────────────────────────────────
+function renderHero(recoveries, cycles, sleeps, workouts) {
+  const latest = {
+    recovery: recoveries[recoveries.length - 1]?.score?.recovery_score,
+    strain:   cycles[cycles.length - 1]?.score?.strain,
+    sleep:    sleeps[sleeps.length - 1]?.score?.sleep_performance_percentage,
+    rhr:      recoveries[recoveries.length - 1]?.score?.resting_heart_rate,
+  };
+
+  const cards = [
+    { label: 'Recovery', value: fmt.pct(latest.recovery), unit: '', sub: recoveryLabel(latest.recovery), color: recoveryColor(latest.recovery), ring: latest.recovery ?? 0, max: 100, id: 'ring-recovery' },
+    { label: 'Day Strain', value: fmt.strain(latest.strain), unit: '', sub: strainLabel(latest.strain), color: 'var(--strain)', ring: latest.strain ?? 0, max: 21, id: 'ring-strain' },
+    { label: 'Sleep', value: fmt.pct(latest.sleep), unit: '', sub: 'Performance score', color: 'var(--sleep)', ring: latest.sleep ?? 0, max: 100, id: 'ring-sleep' },
+    { label: 'Resting HR', value: fmt.num(latest.rhr), unit: 'bpm', sub: 'Last night', color: 'var(--hr)', ring: latest.rhr ? Math.min(latest.rhr, 100) : 0, max: 100, id: 'ring-hr' },
+  ];
+
+  $('hero-cards').innerHTML = cards.map(c => `
+    <div class="ring-card" style="--accent-color:${c.color}">
+      <div class="ring-canvas-wrap">
+        <canvas id="${c.id}" width="100" height="100"></canvas>
+        <div class="ring-center">
+          <div class="ring-value" style="color:${c.color}">${c.value}</div>
+          ${c.unit ? `<div class="ring-unit">${c.unit}</div>` : ''}
+        </div>
+      </div>
+      <div class="ring-label">${c.label}</div>
+      <div class="ring-sub">${c.sub}</div>
+    </div>
+  `).join('');
+
+  cards.forEach(c => drawRing(c.id, c.ring, c.max, c.color));
+}
+
+function drawRing(id, value, max, color) {
+  const canvas = $(id);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const pct = Math.max(0, Math.min(value / max, 1));
+  const cx = 50, cy = 50, r = 38, lw = 7;
+  const start = -Math.PI / 2;
+
+  ctx.clearRect(0, 0, 100, 100);
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#1e1e2e';
+  ctx.lineWidth = lw;
+  ctx.stroke();
+
+  if (pct > 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, start, start + Math.PI * 2 * pct);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+}
+
+function recoveryColor(v) {
+  if (v == null) return 'var(--muted)';
+  if (v >= 67) return 'var(--recovery)';
+  if (v >= 34) return '#f5a623';
+  return 'var(--hr)';
+}
+
+function recoveryLabel(v) {
+  if (v == null) return 'No data';
+  if (v >= 67) return 'Green — Ready';
+  if (v >= 34) return 'Yellow — Moderate';
+  return 'Red — Rest';
+}
+
+function strainLabel(v) {
+  if (v == null) return 'No data';
+  if (v >= 18) return 'All Out';
+  if (v >= 14) return 'Overreaching';
+  if (v >= 10) return 'Strenuous';
+  if (v >= 7) return 'Moderate';
+  return 'Light';
+}
+
+// ── Charts ────────────────────────────────────────────────────
+const chartDefaults = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { display: false }, tooltip: { backgroundColor: '#13131a', titleColor: '#e8e8f0', bodyColor: '#6b6b85', borderColor: '#1e1e2e', borderWidth: 1 } },
+  scales: {
+    x: { ticks: { color: '#6b6b85', font: { size: 10 }, maxTicksLimit: 7 }, grid: { color: '#1e1e2e' } },
+    y: { ticks: { color: '#6b6b85', font: { size: 10 } }, grid: { color: '#1e1e2e' } },
+  },
+};
+
+function renderCharts(recoveries, cycles, sleeps) {
+  const recLabels = recoveries.map(r => fmt.date(r.created_at));
+  const recScores = recoveries.map(r => r.score?.recovery_score ?? null);
+  const recRHR    = recoveries.map(r => r.score?.resting_heart_rate ?? null);
+
+  const cycLabels  = cycles.map(c => fmt.date(c.start));
+  const cycStrain  = cycles.map(c => c.score?.strain ?? null);
+
+  const slpLabels  = sleeps.filter(s => !s.nap).map(s => fmt.date(s.start));
+  const slpPerf    = sleeps.filter(s => !s.nap).map(s => s.score?.sleep_performance_percentage ?? null);
+
+  makeChart('chart-recovery', 'line', recLabels, recScores, 'var(--recovery)', { ...chartDefaults, scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, min: 0, max: 100 } } });
+  makeChart('chart-strain',   'bar',  cycLabels, cycStrain,  'var(--strain)',   { ...chartDefaults, scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, min: 0, max: 21 } } });
+  makeChart('chart-sleep',    'line', slpLabels, slpPerf,    'var(--sleep)',    { ...chartDefaults, scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, min: 0, max: 100 } } });
+  makeChart('chart-rhr',      'line', recLabels, recRHR,     'var(--hr)',       chartDefaults);
+}
+
+function makeChart(id, type, labels, data, color, options) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = $(id).getContext('2d');
+  const isLine = type === 'line';
+  charts[id] = new Chart(ctx, {
+    type,
+    data: {
+      labels,
+      datasets: [{
+        data,
+        borderColor: color,
+        backgroundColor: isLine ? color + '18' : color + 'cc',
+        borderWidth: isLine ? 2 : 0,
+        fill: isLine,
+        tension: 0.4,
+        pointRadius: isLine ? 3 : 0,
+        pointHoverRadius: 5,
+        pointBackgroundColor: color,
+        borderRadius: isLine ? 0 : 4,
+      }],
+    },
+    options,
+  });
+}
+
+// ── Workout table ─────────────────────────────────────────────
+function renderWorkoutTable(workouts) {
+  if (!workouts.length) {
+    $('workout-table').innerHTML = `<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:1.5rem">No workouts in this range</td></tr>`;
+    return;
+  }
+  $('workout-table').innerHTML = [...workouts].reverse().slice(0, 20).map(w => {
+    const sport = SPORT_NAMES[w.sport_id] || `Sport ${w.sport_id}`;
+    const dur = w.end && w.start ? fmt.time(new Date(w.end) - new Date(w.start)) : '—';
+    const strain = w.score?.strain;
+    const badgeCls = strain >= 15 ? 'orange' : strain >= 10 ? 'orange' : 'green';
+    return `<tr>
+      <td>${fmt.date(w.start)}</td>
+      <td><strong>${sport}</strong></td>
+      <td><span class="badge ${badgeCls}">${fmt.strain(strain)}</span></td>
+      <td>${fmt.num(w.score?.average_heart_rate)} bpm</td>
+      <td>${fmt.num(w.score?.max_heart_rate)} bpm</td>
+      <td>${dur}</td>
+      <td>${fmt.num(w.score?.kilojoule ? w.score.kilojoule / 4.184 : null)} kcal</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Sleep table ───────────────────────────────────────────────
+function renderSleepTable(sleeps) {
+  const main = sleeps.filter(s => !s.nap);
+  if (!main.length) {
+    $('sleep-table').innerHTML = `<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:1.5rem">No sleep data in this range</td></tr>`;
+    return;
+  }
+  $('sleep-table').innerHTML = [...main].reverse().slice(0, 14).map(s => {
+    const dur = s.end && s.start ? fmt.time(new Date(s.end) - new Date(s.start)) : '—';
+    const perf = s.score?.sleep_performance_percentage;
+    const badgeCls = perf >= 85 ? 'green' : perf >= 70 ? 'purple' : 'red';
+    const remMs  = s.score?.stage_summary?.total_rem_sleep_time_milli ?? 0;
+    const deepMs = s.score?.stage_summary?.total_slow_wave_sleep_time_milli ?? 0;
+    return `<tr>
+      <td>${fmt.date(s.start)}</td>
+      <td>${dur}</td>
+      <td><span class="badge ${badgeCls}">${fmt.pct(perf)}</span></td>
+      <td>${fmt.pct(s.score?.sleep_efficiency_percentage)}</td>
+      <td>${fmt.time(remMs)}</td>
+      <td>${fmt.time(deepMs)}</td>
+      <td>${fmt.num(s.score?.disturbance_count)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Enter key shortcut ────────────────────────────────────────
+$('token-input').addEventListener('keydown', e => { if (e.key === 'Enter') connect(); });
+</script>
+</body>
+</html>
