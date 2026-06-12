@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Privacy Policy — WHOOP Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg: #0a0a0f; --surface: #13131a; --border: #1e1e2e; --text: #e8e8f0; --muted: #6b6b85; --accent: #00e5a0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; line-height: 1.7; padding: 3rem 1.5rem; }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  .logo { font-family: monospace; font-size: 0.9rem; letter-spacing: 0.25em; color: var(--accent); font-weight: 700; margin-bottom: 2rem; display: block; }
+  h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .updated { color: var(--muted); font-size: 0.85rem; margin-bottom: 2.5rem; }
+  h2 { font-size: 1.05rem; font-weight: 600; margin: 2rem 0 0.5rem; color: var(--accent); }
+  p { color: #b0b0c8; font-size: 0.92rem; margin-bottom: 0.75rem; }
+  a { color: var(--accent); text-decoration: none; }
+  .back { display: inline-block; margin-top: 2.5rem; color: var(--muted); font-size: 0.85rem; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 1rem; }
+  .back:hover { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="logo">WHOOP DASHBOARD</span>
+  <h1>Privacy Policy</h1>
+  <div class="updated">Last updated: June 2025</div>
+
+  <h2>Overview</h2>
+  <p>WHOOP Dashboard is a personal, open-source tool that visualizes your WHOOP fitness data. This privacy policy explains how your data is handled when you use this application.</p>
+
+  <h2>Data We Collect</h2>
+  <p>This application does not collect, store, or transmit any of your personal data to any server. All data processing happens entirely within your browser.</p>
+
+  <h2>WHOOP Data</h2>
+  <p>When you authorize this app, your WHOOP access token is stored only in your browser's local memory for the current session. It is used exclusively to fetch your personal health data directly from the WHOOP API. No WHOOP data (recovery scores, sleep data, workout data, heart rate, etc.) is ever sent to any third-party server or stored outside your browser.</p>
+
+  <h2>OAuth Tokens</h2>
+  <p>Your OAuth access token and refresh token are stored in your browser's localStorage solely to maintain your session across page refreshes. They are never transmitted to any server other than WHOOP's own API endpoints (api.prod.whoop.com).</p>
+
+  <h2>No Analytics or Tracking</h2>
+  <p>This application contains no analytics, tracking pixels, cookies, or any third-party monitoring tools. We do not know who uses this application or when.</p>
+
+  <h2>Third-Party Services</h2>
+  <p>This app uses Chart.js (loaded from cdnjs.cloudflare.com) for data visualization, and Google Fonts for typography. These are standard CDN resources and do not receive any of your personal health data.</p>
+
+  <h2>Data Deletion</h2>
+  <p>To remove all stored data, click "Disconnect" within the app or clear your browser's localStorage. Since no data is stored on any server, this fully removes all traces of your session.</p>
+
+  <h2>Contact</h2>
+  <p>This is a personal project. For questions, open an issue on <a href="https://github.com/gandesirijugalkishore/whoop-dashboard" target="_blank">GitHub</a>.</p>
+
+  <a class="back" href="/">← Back to Dashboard</a>
+</div>
+</body>
+</html>
