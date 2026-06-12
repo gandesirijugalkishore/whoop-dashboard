@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Connecting… — WHOOP Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Mono:wght@700&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg: #0a0a0f; --surface: #13131a; --border: #1e1e2e; --text: #e8e8f0; --muted: #6b6b85; --accent: #00e5a0; --error: #ff4d6d; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 2.5rem; max-width: 420px; width: 100%; text-align: center; }
+  .logo { font-family: 'Space Mono', monospace; font-size: 0.85rem; letter-spacing: 0.3em; color: var(--accent); margin-bottom: 1.5rem; }
+  .spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1.5rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  h2 { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; }
+  p { color: var(--muted); font-size: 0.85rem; }
+  .error-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+  .btn { display: inline-block; margin-top: 1.5rem; background: var(--accent); color: #000; font-weight: 700; border-radius: 10px; padding: 0.7rem 1.5rem; font-size: 0.9rem; text-decoration: none; cursor: pointer; border: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">WHOOP</div>
+  <div id="loading-state">
+    <div class="spinner"></div>
+    <h2>Connecting your account…</h2>
+    <p>Exchanging authorization code with WHOOP.</p>
+  </div>
+  <div id="error-state" style="display:none">
+    <div class="error-icon">⚠️</div>
+    <h2>Connection failed</h2>
+    <p id="error-detail">Something went wrong during authorization.</p>
+    <a class="btn" href="/">Try again</a>
+  </div>
+</div>
+
+<script>
+(async () => {
+  const params   = new URLSearchParams(window.location.search);
+  const code     = params.get('code');
+  const error    = params.get('error');
+  const state    = params.get('state');
+
+  function showError(msg) {
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('error-state').style.display  = 'block';
+    document.getElementById('error-detail').textContent   = msg;
+  }
+
+  if (error) return showError(`WHOOP returned: ${error}`);
+  if (!code)  return showError('No authorization code received.');
+
+  // Verify state to prevent CSRF
+  const savedState = sessionStorage.getItem('whoop_oauth_state');
+  if (state !== savedState) return showError('State mismatch — possible CSRF. Please try again.');
+
+  const clientId     = localStorage.getItem('whoop_client_id');
+  const clientSecret = localStorage.getItem('whoop_client_secret');
+
+  if (!clientId || !clientSecret) {
+    return showError('Client credentials missing. Please enter them on the main page.');
+  }
+
+  try {
+    // Exchange code for token via a CORS proxy since WHOOP's token endpoint
+    // doesn't support browser-side CORS requests
+    const body = new URLSearchParams({
+      grant_type:    'authorization_code',
+      code,
+      redirect_uri:  'https://gandesirijugalkishore.github.io/whoop-dashboard/callback.html',
+      client_id:     clientId,
+      client_secret: clientSecret,
+    });
+
+    const res = await fetch('https://api.prod.whoop.com/oauth/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return showError(err.error_description || `Token exchange failed (${res.status})`);
+    }
+
+    const token = await res.json();
+    localStorage.setItem('whoop_token', JSON.stringify(token));
+    sessionStorage.removeItem('whoop_oauth_state');
+
+    // Redirect back to dashboard
+    window.location.href = '/whoop-dashboard/';
+  } catch (e) {
+    showError(`Network error: ${e.message}`);
+  }
+})();
+</script>
+</body>
+</html>
